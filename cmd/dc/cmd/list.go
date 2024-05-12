@@ -24,6 +24,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/jluckyiv/diskcache"
 	"github.com/spf13/cobra"
@@ -39,11 +40,11 @@ var listCmd = &cobra.Command{
 		result, err := cache.List()
 		cobra.CheckErr(err)
 		if len(result) == 0 {
-			fmt.Println("No keys found")
+			fmt.Println("No entries found")
 			os.Exit(0)
 		}
-		for _, key := range result {
-			fmt.Printf("%s\n", key)
+		for _, entry := range result {
+			fmt.Printf("%s %s\n", entry.Expiry.Local().Format(time.DateTime), entry.Key)
 		}
 	},
 }
