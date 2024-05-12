@@ -31,7 +31,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile  string
+	cacheDir string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -50,6 +53,7 @@ to quickly create a Cobra application.`,
 		value, _ := cmd.Flags().GetString("value")
 		duration, _ := cmd.Flags().GetDuration("duration")
 		fmt.Printf("key: %s\nvalue: %s\nduration: %s\n", key, value, duration)
+		fmt.Printf("cacheDir: %s\n", cacheDir)
 	},
 }
 
@@ -101,4 +105,5 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+	cacheDir = viper.GetString("cache_dir")
 }
