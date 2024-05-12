@@ -29,7 +29,7 @@ func TestDiskCache(t *testing.T) {
 	t.Run("TestFilename", func(t *testing.T) {
 		key := "testkey"
 		got := cache.Filename(key)
-		want := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+		want := fmt.Sprintf("%x.json", sha256.Sum256([]byte(key)))
 		if got != want {
 			t.Fatalf("Want filename to be %s, got %s", want, got)
 		}
@@ -38,7 +38,7 @@ func TestDiskCache(t *testing.T) {
 	t.Run("TestPath", func(t *testing.T) {
 		key := "testkey"
 		got := cache.Path(key)
-		filename := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+		filename := fmt.Sprintf("%x.json", sha256.Sum256([]byte(key)))
 		want := path.Join(cacheDir, filename)
 		if got != want {
 			t.Fatalf("Want cache path to be %s, got %s", want, got)
