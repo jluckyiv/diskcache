@@ -50,7 +50,7 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		key, _ := cmd.Flags().GetString("key")
-		value, _ := cmd.Flags().GetString("value")
+		value, _ := cmd.Flags().GetString("val")
 		duration, _ := cmd.Flags().GetDuration("duration")
 		fmt.Printf("key: %s\nvalue: %s\nduration: %s\n", key, value, duration)
 		fmt.Printf("cacheDir: %s\n", cacheDir)
