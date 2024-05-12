@@ -54,6 +54,17 @@ to quickly create a Cobra application.`,
 		duration, _ := cmd.Flags().GetDuration("duration")
 		fmt.Printf("key: %s\nvalue: %s\nduration: %s\n", key, value, duration)
 		fmt.Printf("cacheDir: %s\n", cacheDir)
+		cache, err := diskcache.New(cacheDir)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		err = cache.Put(key, []byte(value), duration)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println("Value stored successfully")
 	},
 }
 
