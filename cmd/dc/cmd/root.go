@@ -24,7 +24,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/jluckyiv/diskcache"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -44,7 +46,9 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("dc called")
+		key, _ := cmd.Flags().GetString("key")
+		value, _ := cmd.Flags().GetString("value")
+		duration, _ := cmd.Flags().GetDuration("duration")
 	},
 }
 
@@ -64,11 +68,10 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dc.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.dc.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
