@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -13,7 +15,7 @@ type Cache struct {
 	dir string
 }
 
-type data struct {
+type Entry struct {
 	Expiry time.Time
 	Key    string
 	Value  []byte
@@ -42,7 +44,7 @@ func (c Cache) Path(key string) string {
 }
 
 func (c Cache) Put(key string, value []byte, duration time.Duration) error {
-	bytes, err := json.Marshal(data{
+	bytes, err := json.Marshal(Entry{
 		Key:    key,
 		Value:  value,
 		Expiry: time.Now().Add(duration),
@@ -76,15 +78,15 @@ func (c Cache) IsExpired(key string) bool {
 	return time.Now().After(c.Expiry(key))
 }
 
-func (c Cache) Load(key string) (data, error) {
+func (c Cache) Load(key string) (Entry, error) {
 	bytes, err := os.ReadFile(c.Path(key))
 	if err != nil {
-		return data{}, err
+		return Entry{}, err
 	}
-	var d data
+	var d Entry
 	err = json.Unmarshal(bytes, &d)
 	if err != nil {
-		return data{}, err
+		return Entry{}, err
 	}
 	return d, nil
 }
@@ -118,7 +120,7 @@ func (c Cache) Clean() error {
 		if err != nil {
 			return err
 		}
-		var d data
+		var d Entry
 		err = json.Unmarshal(bytes, &d)
 		if err != nil {
 			return err
@@ -134,23 +136,53 @@ func (c Cache) Clean() error {
 	return nil
 }
 
-func (c Cache) List() ([]data, error) {
+func SortByKey(entries []Entry) {
+	slices.SortFunc(entries, func(a, b Entry) int {
+		return strings.Compare(a.Key, b.Key)
+	})
+}
+
+func SortByValue(entries []Entry) {
+	slices.SortFunc(entries, func(a, b Entry) int {
+		return strings.Compare(string(a.Value), string(b.Value))
+	})
+}
+
+func SortByExpiry(entries []Entry) {
+	slices.SortFunc(entries, func(a, b Entry) int {
+		switch {
+		case a.Expiry.Before(b.Expiry):
+			return -1
+		case a.Expiry.After(b.Expiry):
+			return 1
+		default:
+			return 0
+		}
+	})
+}
+
+func (c Cache) List(options ...func([]Entry)) ([]Entry, error) {
 	files, err := os.ReadDir(c.dir)
 	if err != nil {
 		return nil, err
 	}
-	var entries []data
+	var entries []Entry
 	for _, file := range files {
 		bytes, err := os.ReadFile(path.Join(c.dir, file.Name()))
 		if err != nil {
 			return nil, err
 		}
-		var d data
+		var d Entry
 		err = json.Unmarshal(bytes, &d)
 		if err != nil {
 			return nil, err
 		}
 		entries = append(entries, d)
+	}
+
+	// Apply the sorting options.
+	for _, option := range options {
+		option(entries)
 	}
 	return entries, nil
 }

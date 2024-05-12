@@ -190,16 +190,17 @@ func TestDiskCache(t *testing.T) {
 
 		// Save some test data.
 		testData := []struct {
-			key   string
-			value string
+			key    string
+			value  string
+			expiry time.Duration
 		}{
-			{"key1", "value1"},
-			{"key2", "value2"},
-			{"key3", "value3"},
+			{"key1", "value3", 3 * time.Minute},
+			{"key2", "value2", 1 * time.Minute},
+			{"key3", "value1", 2 * time.Minute},
 		}
 
 		for _, td := range testData {
-			err := cache.Put(td.key, []byte(td.value), 1*time.Minute)
+			err := cache.Put(td.key, []byte(td.value), td.expiry)
 			if err != nil {
 				t.Fatalf("Error saving cache: %v", err)
 			}
@@ -226,6 +227,31 @@ func TestDiskCache(t *testing.T) {
 			if !found {
 				t.Fatalf("Expected key %s to be in list", td.key)
 			}
+		}
+
+		// Sort the entries
+		data, err = cache.List(diskcache.SortByKey)
+		if err != nil {
+			t.Fatalf("Error sorting cache: %v", err)
+		}
+		if data[0].Key != "key1" {
+			t.Fatalf("Expected key1 to be first, got %s", data[0].Key)
+		}
+
+		data, err = cache.List(diskcache.SortByValue)
+		if err != nil {
+			t.Fatalf("Error sorting cache: %v", err)
+		}
+		if string(data[0].Key) != "key3" {
+			t.Fatalf("Expected key3 to be first, got %s", data[0].Key)
+		}
+
+		data, err = cache.List(diskcache.SortByExpiry)
+		if err != nil {
+			t.Fatalf("Error sorting cache: %v", err)
+		}
+		if string(data[0].Key) != "key2" {
+			t.Fatalf("Expected key2 to be first, got %s", data[0].Key)
 		}
 	})
 
