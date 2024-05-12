@@ -1,0 +1,43 @@
+version: "3"
+
+tasks:
+  build:
+    desc: "build the compiled binary"
+    cmds:
+      - go build
+
+  clean:
+    desc: "clean up"
+    cmds:
+      - go clean
+
+  test:
+    desc: "run all unit tests"
+    cmds:
+      - gotestsum ./...
+
+  watch:
+    desc: "run all unit tests in watch mode"
+    cmds:
+      - gotestsum --watch ./...
+
+  cover:
+    desc: "check test coverage"
+    cmds:
+      - go test ./... --cover
+
+  fmt:
+    desc: "format code"
+    cmds:
+      - gofumpt -l -w .
+
+  lint:
+    desc: "lint the code"
+    cmds:
+      - golangci-lint run
+
+  run:
+    desc: "runs the compiled binary"
+    cmds:
+      # - op run --no-masking --env-file=.env -- go run cli/jams/main.go {{.CLI_ARGS}}
+      - go run cmd/dc/main.go {{.CLI_ARGS}}
