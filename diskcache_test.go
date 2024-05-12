@@ -175,7 +175,7 @@ func TestDiskCache(t *testing.T) {
 
 	t.Run("TestList", func(t *testing.T) {
 		// Clear the cache.
-		err := cache.Clear()
+		err := cache.ClearAll()
 		if err != nil {
 			t.Fatalf("Error clearing cache: %v", err)
 		}
@@ -226,6 +226,66 @@ func TestDiskCache(t *testing.T) {
 			if !found {
 				t.Fatalf("Expected key %s to be in list", td.key)
 			}
+		}
+	})
+
+	t.Run("TestClear", func(t *testing.T) {
+		// Clear the cache.
+		err := cache.ClearAll()
+		if err != nil {
+			t.Fatalf("Error clearing cache: %v", err)
+		}
+
+		empty, err := cache.List()
+		if err != nil {
+			t.Fatalf("Error listing cache: %v", err)
+		}
+		if len(empty) != 0 {
+			t.Fatalf("Expected 0 keys, got %d", len(empty))
+		}
+
+		// Save some test data.
+		testData := []struct {
+			key    string
+			value  string
+			expiry time.Duration
+		}{
+			{"key1", "value1", 1 * time.Minute},
+			{"key2", "value2", 1 * time.Minute},
+			{"key3", "value3", -1 * time.Minute},
+		}
+
+		for _, td := range testData {
+			err := cache.Put(td.key, []byte(td.value), td.expiry)
+			if err != nil {
+				t.Fatalf("Error saving cache: %v", err)
+			}
+		}
+
+		// List the keys.
+		keys, err := cache.List()
+		if err != nil {
+			t.Fatalf("Error listing cache: %v", err)
+		}
+		if len(keys) != 3 {
+			t.Fatalf("Expected 3 keys, got %d", len(keys))
+		}
+
+		// Clear the cache.
+		err = cache.Clear()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// List the keys.
+		keys, err = cache.List()
+		if err != nil {
+			t.Fatalf("Error listing cache: %v", err)
+		}
+
+		// Outdated keys should be removed.
+		if len(keys) != 2 {
+			t.Fatalf("Expected 2 keys, got %d", len(keys))
 		}
 	})
 }

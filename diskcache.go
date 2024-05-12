@@ -93,13 +93,40 @@ func (c Cache) Remove(key string) error {
 	return os.Remove(c.Path(key))
 }
 
-func (c Cache) Clear() error {
+func (c Cache) ClearAll() error {
 	files, err := os.ReadDir(c.dir)
 	if err != nil {
 		return err
 	}
 	for _, file := range files {
 		err = os.Remove(path.Join(c.dir, file.Name()))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c Cache) Clear() error {
+	files, err := os.ReadDir(c.dir)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		filename := path.Join(c.dir, file.Name())
+		bytes, err := os.ReadFile(filename)
+		if err != nil {
+			return err
+		}
+		var d data
+		err = json.Unmarshal(bytes, &d)
+		if err != nil {
+			return err
+		}
+		if time.Now().Before(d.Expiry) {
+			continue
+		}
+		err = os.Remove(filename)
 		if err != nil {
 			return err
 		}
