@@ -26,6 +26,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/jluckyiv/diskcache"
 	"github.com/spf13/cobra"
 )
@@ -43,8 +44,22 @@ var listCmd = &cobra.Command{
 			fmt.Println("No entries found")
 			os.Exit(0)
 		}
+
+		// Colors are terminal red, yellow, and green from Tokyo Night theme
+		// https://github.com/enkia/tokyo-night-vscode-theme?tab=readme-ov-file#tokyo-night-and-tokyo-night-storm
+		// https://github.com/enkia/tokyo-night-vscode-theme?tab=readme-ov-file#tokyo-night-light
+		expiredStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#8c4351", Dark: "#f7768e"})
+		almostExpiredStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#8f5e15", Dark: "#e0af68"})
+		currentStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#33635c", Dark: "#73daca"})
 		for _, entry := range result {
-			fmt.Printf("%s %s\n", entry.Expiry.Local().Format(time.DateTime), entry.Key)
+			switch {
+			case time.Now().After(entry.Expiry):
+				fmt.Printf("%s %s\n", expiredStyle.Render(entry.Expiry.Local().Format(time.DateTime)), entry.Key)
+			case time.Until(entry.Expiry).Minutes() < 5:
+				fmt.Printf("%s %s\n", almostExpiredStyle.Render(entry.Expiry.Local().Format(time.DateTime)), entry.Key)
+			default:
+				fmt.Printf("%s %s\n", currentStyle.Render(entry.Expiry.Local().Format(time.DateTime)), entry.Key)
+			}
 		}
 	},
 }
