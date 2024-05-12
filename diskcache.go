@@ -93,7 +93,7 @@ func (c Cache) Remove(key string) error {
 	return os.Remove(c.Path(key))
 }
 
-func (c Cache) ClearAll() error {
+func (c Cache) Flush() error {
 	files, err := os.ReadDir(c.dir)
 	if err != nil {
 		return err
@@ -107,7 +107,7 @@ func (c Cache) ClearAll() error {
 	return nil
 }
 
-func (c Cache) Clear() error {
+func (c Cache) Clean() error {
 	files, err := os.ReadDir(c.dir)
 	if err != nil {
 		return err

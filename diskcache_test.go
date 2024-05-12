@@ -174,10 +174,10 @@ func TestDiskCache(t *testing.T) {
 	})
 
 	t.Run("TestList", func(t *testing.T) {
-		// Clear the cache.
-		err := cache.ClearAll()
+		// Flush the cache.
+		err := cache.Flush()
 		if err != nil {
-			t.Fatalf("Error clearing cache: %v", err)
+			t.Fatalf("Error flushing cache: %v", err)
 		}
 
 		empty, err := cache.List()
@@ -229,11 +229,11 @@ func TestDiskCache(t *testing.T) {
 		}
 	})
 
-	t.Run("TestClear", func(t *testing.T) {
-		// Clear the cache.
-		err := cache.ClearAll()
+	t.Run("TestClean", func(t *testing.T) {
+		// Flush the cache.
+		err := cache.Flush()
 		if err != nil {
-			t.Fatalf("Error clearing cache: %v", err)
+			t.Fatalf("Error flushing cache: %v", err)
 		}
 
 		empty, err := cache.List()
@@ -271,8 +271,8 @@ func TestDiskCache(t *testing.T) {
 			t.Fatalf("Expected 3 keys, got %d", len(keys))
 		}
 
-		// Clear the cache.
-		err = cache.Clear()
+		// Clean the cache.
+		err = cache.Clean()
 		if err != nil {
 			t.Fatal(err)
 		}
