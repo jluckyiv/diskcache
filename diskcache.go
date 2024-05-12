@@ -34,7 +34,7 @@ func (c Cache) Dir() string {
 }
 
 func (c Cache) Filename(key string) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+	return fmt.Sprintf("%x.json", sha256.Sum256([]byte(key)))
 }
 
 func (c Cache) Path(key string) string {
