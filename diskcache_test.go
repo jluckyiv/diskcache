@@ -205,20 +205,20 @@ func TestDiskCache(t *testing.T) {
 			}
 		}
 
-		// List the keys.
-		keys, err := cache.List()
+		// List the data.
+		data, err := cache.List()
 		if err != nil {
 			t.Fatalf("Error listing cache: %v", err)
 		}
-		if len(keys) != 3 {
-			t.Fatalf("Expected 3 keys, got %d", len(keys))
+		if len(data) != 3 {
+			t.Fatalf("Expected 3 keys, got %d", len(data))
 		}
 
 		// Check that all the test data keys are in the list.
 		for _, td := range testData {
 			found := false
-			for _, key := range keys {
-				if key == td.key {
+			for _, d := range data {
+				if d.Key == td.key {
 					found = true
 					break
 				}

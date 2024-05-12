@@ -134,12 +134,12 @@ func (c Cache) Clean() error {
 	return nil
 }
 
-func (c Cache) List() ([]string, error) {
+func (c Cache) List() ([]data, error) {
 	files, err := os.ReadDir(c.dir)
 	if err != nil {
 		return nil, err
 	}
-	var keys []string
+	var entries []data
 	for _, file := range files {
 		bytes, err := os.ReadFile(path.Join(c.dir, file.Name()))
 		if err != nil {
@@ -150,7 +150,7 @@ func (c Cache) List() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		keys = append(keys, d.Key)
+		entries = append(entries, d)
 	}
-	return keys, nil
+	return entries, nil
 }
