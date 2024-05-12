@@ -64,7 +64,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.diskcache.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dc.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -84,7 +84,7 @@ func initConfig() {
 		// Search config in home directory with name ".diskcache" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".diskcache")
+		viper.SetConfigName(".dc")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
