@@ -49,6 +49,7 @@ to quickly create a Cobra application.`,
 		key, _ := cmd.Flags().GetString("key")
 		value, _ := cmd.Flags().GetString("value")
 		duration, _ := cmd.Flags().GetDuration("duration")
+		fmt.Printf("key: %s\nvalue: %s\nduration: %s\n", key, value, duration)
 	},
 }
 
@@ -72,6 +73,11 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
+	rootCmd.Flags().StringP("key", "k", "", "Key to store the value")
+	rootCmd.Flags().StringP("val", "v", "", "Value to store")
+	rootCmd.Flags().DurationP("duration", "d", 1*time.Hour, "Duration to store the value")
+	_ = rootCmd.MarkFlagRequired("key")
+	_ = rootCmd.MarkFlagRequired("value")
 }
 
 // initConfig reads in config file and ENV variables if set.
