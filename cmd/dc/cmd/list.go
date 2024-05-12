@@ -36,9 +36,23 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the keys in the cache",
 	Run: func(cmd *cobra.Command, args []string) {
+		sortByKey, _ := cmd.Flags().GetBool("sort-key")
+		sortByVal, _ := cmd.Flags().GetBool("sort-val")
+		sortByExp, _ := cmd.Flags().GetBool("sort-exp")
+
 		cache, err := diskcache.New(cacheDir)
 		cobra.CheckErr(err)
-		result, err := cache.List()
+		var result []diskcache.Entry
+		switch {
+		case sortByKey:
+			result, err = cache.List(diskcache.SortByKey)
+		case sortByVal:
+			result, err = cache.List(diskcache.SortByValue)
+		case sortByExp:
+			result, err = cache.List(diskcache.SortByExpiry)
+		default:
+			result, err = cache.List(diskcache.SortByExpiry)
+		}
 		cobra.CheckErr(err)
 		if len(result) == 0 {
 			fmt.Println("No entries found")
@@ -67,4 +81,8 @@ var listCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(listCmd)
+	listCmd.Flags().BoolP("sort-key", "K", false, "Sort by key")
+	listCmd.Flags().BoolP("sort-val", "V", false, "Sort by value")
+	listCmd.Flags().BoolP("sort-exp", "E", false, "Sort by expiry")
+	listCmd.MarkFlagsMutuallyExclusive("sort-key", "sort-val", "sort-exp")
 }
