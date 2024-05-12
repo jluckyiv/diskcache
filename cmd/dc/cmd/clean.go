@@ -28,19 +28,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// clearCmd represents the clear command
-var clearCmd = &cobra.Command{
-	Use:   "clear",
-	Short: "clear the cache",
+// cleanCmd represents the clear command
+var cleanCmd = &cobra.Command{
+	Use:   "clean",
+	Short: "clean the cache (expired entries)",
 	Run: func(cmd *cobra.Command, args []string) {
 		cache, err := diskcache.New(cacheDir)
 		cobra.CheckErr(err)
-		err = cache.Clear()
+		err = cache.Clean()
 		cobra.CheckErr(err)
-		fmt.Println("Cache cleared")
+		fmt.Println("Cache cleaned")
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(clearCmd)
+	rootCmd.AddCommand(cleanCmd)
 }
