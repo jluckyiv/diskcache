@@ -52,13 +52,14 @@ var listCmd = &cobra.Command{
 		almostExpiredStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#8f5e15", Dark: "#e0af68"})
 		currentStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#33635c", Dark: "#73daca"})
 		for _, entry := range result {
+			expiryString := entry.Expiry.Local().Format(time.DateTime)
 			switch {
 			case time.Now().After(entry.Expiry):
-				fmt.Printf("%s %s\n", expiredStyle.Render(entry.Expiry.Local().Format(time.DateTime)), entry.Key)
+				fmt.Printf("%s %s\n", expiredStyle.Render(expiryString), entry.Key)
 			case time.Until(entry.Expiry).Minutes() < 5:
-				fmt.Printf("%s %s\n", almostExpiredStyle.Render(entry.Expiry.Local().Format(time.DateTime)), entry.Key)
+				fmt.Printf("%s %s\n", almostExpiredStyle.Render(expiryString), entry.Key)
 			default:
-				fmt.Printf("%s %s\n", currentStyle.Render(entry.Expiry.Local().Format(time.DateTime)), entry.Key)
+				fmt.Printf("%s %s\n", currentStyle.Render(expiryString), entry.Key)
 			}
 		}
 	},
