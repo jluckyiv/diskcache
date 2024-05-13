@@ -3,48 +3,74 @@ package diskcache
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
-	"path"
+	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
+// Cache is a disk cache.
+// It stores entries in a directory on disk.
 type Cache struct {
 	dir string
 }
 
-type Entry struct {
+// Data is a cache entry.
+// It contains a key, a value, and an expiry time.
+// Because the disk cache hashes the key for a filename, the key is stored in the entry.
+// The hash ensures that the filename is valid and unique.
+type Data struct {
 	Expiry time.Time
 	Key    string
 	Value  []byte
 }
 
+// New creates a new disk cache in the given directory.
 func New(dir string) (Cache, error) {
-	err := os.MkdirAll(dir, os.ModePerm)
-	if err != nil {
-		return Cache{}, err
+	var err error
+	// Validate the directory.
+	if len(dir) == 0 {
+		return Cache{}, fmt.Errorf("directory path is empty")
 	}
-	return Cache{
-		dir: dir,
-	}, nil
+	// Create the directory if it doesn't exist.
+	// MkdirAll creates a directory and any necessary parents and
+	// is a no-op if the directory already exists.
+	err = os.MkdirAll(dir, 0755)
+	if err != nil {
+		return Cache{}, fmt.Errorf("error creating cache directory: %w", err)
+	}
+	return Cache{dir: dir}, nil
 }
 
+// Dir returns the directory path of the cache.
 func (c Cache) Dir() string {
 	return c.dir
 }
 
+// Filename returns the filename of a cache entry.
+// TODO: Remove Filename from the public API?
 func (c Cache) Filename(key string) string {
 	return fmt.Sprintf("%x.json", sha256.Sum256([]byte(key)))
 }
 
-func (c Cache) Path(key string) string {
-	return path.Join(c.dir, c.Filename(key))
+// Filepath returns the full path of a cache entry.
+// TODO: Remove Filepath from the public API?
+func (c Cache) Filepath(key string) string {
+	return c.filepath(c.Filename(key))
 }
 
+// Put saves a cache entry with a key, value, and duration.
 func (c Cache) Put(key string, value []byte, duration time.Duration) error {
-	bytes, err := json.Marshal(Entry{
+	// Validate the key.
+	if len(key) == 0 {
+		return fmt.Errorf("key cannot be empty")
+	}
+	bytes, err := json.Marshal(Data{
 		Key:    key,
 		Value:  value,
 		Expiry: time.Now().Add(duration),
@@ -52,104 +78,75 @@ func (c Cache) Put(key string, value []byte, duration time.Duration) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(c.Path(key), bytes, 0644)
+	return os.WriteFile(c.Filepath(key), bytes, 0644)
 }
 
+// Read reads a cache entry from disk and returns all its data.
+// It does not check if the entry is expired.
+func (c Cache) Read(key string) (Data, error) {
+	return c.readFile(c.Filename(key))
+}
+
+// Get gets a cache entry from disk and returns the value only.
+// It returns an error if the entry is expired.
 func (c Cache) Get(key string) ([]byte, error) {
-	d, err := c.Load(key)
+	entry, err := c.Read(key)
 	if err != nil {
 		return nil, err
 	}
-	if time.Now().After(d.Expiry) {
+	if time.Now().After(entry.Expiry) {
 		return nil, fmt.Errorf("cache expired")
 	}
-	return d.Value, nil
+	return entry.Value, nil
 }
 
+// Expiry returns the expiry time of a cache entry.
 func (c Cache) Expiry(key string) time.Time {
-	d, err := c.Load(key)
+	entry, err := c.Read(key)
 	if err != nil {
 		return time.Time{}
 	}
-	return d.Expiry
+	return entry.Expiry
 }
 
+// IsExpired returns true if a cache entry is expired.
 func (c Cache) IsExpired(key string) bool {
 	return time.Now().After(c.Expiry(key))
 }
 
-func (c Cache) Load(key string) (Entry, error) {
-	bytes, err := os.ReadFile(c.Path(key))
+func (c Cache) list() ([]Data, error) {
+	dirEntries, err := os.ReadDir(c.dir)
 	if err != nil {
-		return Entry{}, err
+		return nil, fmt.Errorf("error reading directory: %w", err)
 	}
-	var d Entry
-	err = json.Unmarshal(bytes, &d)
+	var list []Data
+	for _, dirEntry := range dirEntries {
+		entry, err := c.readDirEntry(dirEntry)
+		if err != nil {
+			return nil, fmt.Errorf("error reading entry: %w", err)
+		}
+		list = append(list, entry)
+	}
+	return list, nil
+}
+
+// List returns a list of cache entry data.
+// It accepts sorting options.
+func (c Cache) List(options ...func([]Data)) ([]Data, error) {
+	list, err := c.list()
 	if err != nil {
-		return Entry{}, err
+		return nil, err
 	}
-	return d, nil
-}
-
-func (c Cache) Remove(key string) error {
-	return os.Remove(c.Path(key))
-}
-
-func (c Cache) Flush() error {
-	files, err := os.ReadDir(c.dir)
-	if err != nil {
-		return err
+	// Apply the sorting options.
+	for _, option := range options {
+		option(list)
 	}
-	for _, file := range files {
-		err = os.Remove(path.Join(c.dir, file.Name()))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return list, nil
 }
 
-func (c Cache) Clean() error {
-	files, err := os.ReadDir(c.dir)
-	if err != nil {
-		return err
-	}
-	for _, file := range files {
-		filename := path.Join(c.dir, file.Name())
-		bytes, err := os.ReadFile(filename)
-		if err != nil {
-			return err
-		}
-		var d Entry
-		err = json.Unmarshal(bytes, &d)
-		if err != nil {
-			return err
-		}
-		if time.Now().Before(d.Expiry) {
-			continue
-		}
-		err = os.Remove(filename)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func SortByKey(entries []Entry) {
-	slices.SortFunc(entries, func(a, b Entry) int {
-		return strings.Compare(a.Key, b.Key)
-	})
-}
-
-func SortByValue(entries []Entry) {
-	slices.SortFunc(entries, func(a, b Entry) int {
-		return strings.Compare(string(a.Value), string(b.Value))
-	})
-}
-
-func SortByExpiry(entries []Entry) {
-	slices.SortFunc(entries, func(a, b Entry) int {
+// SortByExpiry is a sort function to sort cache entries by expiry time.
+func SortByExpiry(entries []Data) {
+	slices.SortFunc(entries, func(a, b Data) int {
 		switch {
 		case a.Expiry.Before(b.Expiry):
 			return -1
@@ -161,28 +158,110 @@ func SortByExpiry(entries []Entry) {
 	})
 }
 
-func (c Cache) List(options ...func([]Entry)) ([]Entry, error) {
-	files, err := os.ReadDir(c.dir)
-	if err != nil {
-		return nil, err
-	}
-	var entries []Entry
-	for _, file := range files {
-		bytes, err := os.ReadFile(path.Join(c.dir, file.Name()))
-		if err != nil {
-			return nil, err
-		}
-		var d Entry
-		err = json.Unmarshal(bytes, &d)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, d)
-	}
+// SortByKey is a sort function to sort cache entries by key.
+func SortByKey(entries []Data) {
+	slices.SortFunc(entries, func(a, b Data) int {
+		return strings.Compare(a.Key, b.Key)
+	})
+}
 
-	// Apply the sorting options.
-	for _, option := range options {
-		option(entries)
+// SortByValue is a sort function to sort cache entries by value.
+func SortByValue(entries []Data) {
+	slices.SortFunc(entries, func(a, b Data) int {
+		return strings.Compare(string(a.Value), string(b.Value))
+	})
+}
+
+// Flush deletes all cache entries from disk.
+func (c Cache) Flush() error {
+	dirEntries, err := os.ReadDir(c.dir)
+	if err != nil {
+		return err
 	}
-	return entries, nil
+	var errs error
+	for _, dirEntry := range dirEntries {
+		err = c.removeDirEntry(dirEntry)
+		if err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if errs != nil {
+		return errs
+	}
+	return nil
+}
+
+// Clean deletes expired cache entries from disk.
+func (c Cache) Clean() error {
+	var errs error
+	list, err := c.list()
+	if err != nil {
+		return err
+	}
+	var wg sync.WaitGroup
+	errorsChan := make(chan error, len(list))
+	for _, data := range list {
+		wg.Add(1)
+		go func(data Data) {
+			defer wg.Done()
+			if time.Now().Before(data.Expiry) {
+				return
+			}
+			err := c.Remove(data.Key)
+			if err != nil {
+				errorsChan <- err
+			}
+		}(data)
+	}
+	wg.Wait()
+	close(errorsChan)
+	for err := range errorsChan {
+		if err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
+// Remove deletes a cache entry from disk.
+func (c Cache) Remove(key string) error {
+	return os.Remove(c.Filepath(key))
+}
+
+// readDirEntry reads an entry from disk.
+// It differs from the Read method in that it takes a fs.DirEntry instead of a key.
+// It's not part of the public API because the filename is not known outside the package.
+func (c Cache) readDirEntry(dirEntry fs.DirEntry) (Data, error) {
+	return c.readFile(dirEntry.Name())
+}
+
+// readFile reads a cache entry from disk.
+// It takes a filename instead of a key.
+func (c Cache) readFile(filename string) (Data, error) {
+	bytes, err := os.ReadFile(c.filepath(filename))
+	if err != nil {
+		return Data{}, fmt.Errorf("error reading data: %w", err)
+	}
+	var entry Data
+	err = json.Unmarshal(bytes, &entry)
+	if err != nil {
+		return Data{}, fmt.Errorf("error unmarshaling data: %w", err)
+	}
+	return entry, nil
+}
+
+// filepath returns the full path of a cache entry.
+func (c Cache) filepath(filename string) string {
+	return filepath.Join(c.dir, filename)
+}
+
+// removeFile deletes a cache entry from disk.
+func (c Cache) removeFile(filename string) error {
+	return os.Remove(c.filepath(filename))
+}
+
+// removeDirEntry deletes a cache entry from disk.
+// It differs from the Remove method in that it takes a fs.DirEntry instead of a key.
+func (c Cache) removeDirEntry(dirEntry fs.DirEntry) error {
+	return c.removeFile(dirEntry.Name())
 }

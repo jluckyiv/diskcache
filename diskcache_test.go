@@ -1,10 +1,12 @@
 package diskcache_test
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -37,7 +39,7 @@ func TestDiskCache(t *testing.T) {
 
 	t.Run("TestPath", func(t *testing.T) {
 		key := "testkey"
-		got := cache.Path(key)
+		got := cache.Filepath(key)
 		filename := fmt.Sprintf("%x.json", sha256.Sum256([]byte(key)))
 		want := path.Join(cacheDir, filename)
 		if got != want {
@@ -59,7 +61,7 @@ func TestDiskCache(t *testing.T) {
 		if string(got) != string(want) {
 			t.Fatalf("Expected cache value to be %s, got %s", string(want), string(got))
 		}
-		data, err := cache.Load(key)
+		data, err := cache.Read(key)
 		if err != nil {
 			t.Fatalf("Error loading cache: %v", err)
 		}
@@ -312,6 +314,84 @@ func TestDiskCache(t *testing.T) {
 		// Outdated keys should be removed.
 		if len(keys) != 2 {
 			t.Fatalf("Expected 2 keys, got %d", len(keys))
+		}
+	})
+
+	t.Run("TestEmptyKey", func(t *testing.T) {
+		tempdir := t.TempDir()
+		cacheFolder := "testcache"
+		cacheDir := path.Join(tempdir, cacheFolder)
+		cache, err := diskcache.New(cacheDir)
+		if err != nil {
+			t.Fatalf("Error creating cache: %v", err)
+		}
+		defer func(cache diskcache.Cache) {
+			err := cache.Flush()
+			if err != nil {
+				t.Fatalf("Error flushing cache: %v", err)
+			}
+		}(cache)
+
+		// Test behavior when an empty key is provided
+		err = cache.Put("", []byte("value"), 1*time.Minute)
+		if err == nil {
+			t.Errorf("Expected error for empty key, but got nil")
+		}
+
+		_, err = cache.Get("")
+		if err == nil {
+			t.Errorf("Expected error for empty key, but got nil")
+		}
+
+		err = cache.Remove("")
+		if err == nil {
+			t.Errorf("Expected error for empty key, but got nil")
+		}
+	})
+
+	t.Run("TestConcurrentAccess", func(t *testing.T) {
+		tempdir := t.TempDir()
+		cacheFolder := "testcache"
+		cacheDir := path.Join(tempdir, cacheFolder)
+		cache, err := diskcache.New(cacheDir)
+		if err != nil {
+			t.Fatalf("Error creating cache: %v", err)
+		}
+		defer cache.Flush()
+
+		// Test concurrent access to the cache
+		key := "concurrentKey"
+		value := []byte("value")
+		expiry := 1 * time.Minute
+
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := cache.Put(key, value, expiry)
+				if err != nil {
+					t.Errorf("Error saving cache: %v", err)
+				}
+			}()
+		}
+		wg.Wait()
+
+		cachedValue, err := cache.Get(key)
+		if err != nil {
+			t.Errorf("Error getting cache: %v", err)
+		}
+		if !bytes.Equal(cachedValue, value) {
+			t.Errorf("Expected cache value to be %s, got %s", value, cachedValue)
+		}
+	})
+
+	t.Run("TestInvalidCacheDir", func(t *testing.T) {
+		// Test behavior when an invalid cache directory is provided
+		invalidDir := "/invalid/path"
+		_, err := diskcache.New(invalidDir)
+		if err == nil {
+			t.Errorf("Expected error for invalid cache directory, but got nil")
 		}
 	})
 }
