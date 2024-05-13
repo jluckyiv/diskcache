@@ -47,6 +47,11 @@ func New(dir string) (Cache, error) {
 	return Cache{dir: dir}, nil
 }
 
+// Delete removes the cache directory and all its contents.
+func (c Cache) Delete() error {
+	return os.RemoveAll(c.dir)
+}
+
 // Dir returns the directory path of the cache.
 func (c Cache) Dir() string {
 	return c.dir

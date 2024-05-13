@@ -394,4 +394,20 @@ func TestDiskCache(t *testing.T) {
 			t.Errorf("Expected error for invalid cache directory, but got nil")
 		}
 	})
+
+	t.Run("TestDelete", func(t *testing.T) {
+		// Test behavior when an invalid cache directory is provided
+		cacheDir := path.Join(tempdir, "delete")
+		c, err := diskcache.New(cacheDir)
+		if err != nil {
+			t.Fatalf("Error creating cache: %v", err)
+		}
+		err = c.Delete()
+		if err != nil {
+			t.Fatalf("Error deleting cache: %v", err)
+		}
+		if _, err := os.Stat(cacheDir); !os.IsNotExist(err) {
+			t.Fatalf("Cache dir %s still exists", cacheDir)
+		}
+	})
 }
