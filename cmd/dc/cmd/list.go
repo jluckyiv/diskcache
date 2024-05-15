@@ -42,7 +42,7 @@ var listCmd = &cobra.Command{
 
 		cache, err := diskcache.New(cacheDir)
 		cobra.CheckErr(err)
-		var result []diskcache.Entry
+		var result []diskcache.Data
 		switch {
 		case sortByKey:
 			result, err = cache.List(diskcache.SortByKey)
