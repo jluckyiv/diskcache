@@ -29,29 +29,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// putCmd represents the put command
-var putCmd = &cobra.Command{
-	Use:   "put",
-	Short: "Put a value in the cache",
+// setCmd represents the put command
+var setCmd = &cobra.Command{
+	Use:   "set",
+	Short: "Set a value in the cache",
 	Run: func(cmd *cobra.Command, args []string) {
 		key, _ := cmd.Flags().GetString("key")
 		value, _ := cmd.Flags().GetString("val")
 		duration, _ := cmd.Flags().GetDuration("duration")
 		cache, err := diskcache.New(cacheDir)
 		cobra.CheckErr(err)
-		err = cache.Put(key, []byte(value), duration)
+		err = cache.Set(key, []byte(value), duration)
 		cobra.CheckErr(err)
-		fmt.Printf("Stored %s=%s for %s\n", key, value, duration)
+		fmt.Printf("Set %s=%s for %s\n", key, value, duration)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(putCmd)
-	putCmd.Flags().StringP("key", "k", "", "Key to store the value")
-	putCmd.Flags().StringP("val", "v", "", "Value to store")
-	putCmd.Flags().DurationP("duration", "d", 1*time.Hour, "Duration to store the value")
-	_ = putCmd.MarkFlagRequired("key")
-	_ = putCmd.MarkFlagRequired("value")
+	rootCmd.AddCommand(setCmd)
+	setCmd.Flags().StringP("key", "k", "", "Key to store the value")
+	setCmd.Flags().StringP("val", "v", "", "Value to store")
+	setCmd.Flags().DurationP("duration", "d", 1*time.Hour, "Duration to store the value")
+	_ = setCmd.MarkFlagRequired("key")
+	_ = setCmd.MarkFlagRequired("value")
 
 	// Here you will define your flags and configuration settings.
 

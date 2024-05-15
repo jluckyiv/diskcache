@@ -50,7 +50,7 @@ func TestDiskCache(t *testing.T) {
 	t.Run("TestData", func(t *testing.T) {
 		key := "testkey"
 		want := []byte("testvalue")
-		err := cache.Put(key, want, 1*time.Minute)
+		err := cache.Set(key, want, 1*time.Minute)
 		if err != nil {
 			t.Fatalf("Error saving cache: %v", err)
 		}
@@ -84,7 +84,7 @@ func TestDiskCache(t *testing.T) {
 
 	t.Run("TestUnexpiredCache", func(t *testing.T) {
 		key := "unexpired"
-		err := cache.Put(key, []byte(""), 1*time.Minute)
+		err := cache.Set(key, []byte(""), 1*time.Minute)
 		if err != nil {
 			t.Fatalf("Error saving cache: %v", err)
 		}
@@ -110,7 +110,7 @@ func TestDiskCache(t *testing.T) {
 
 	t.Run("TestExpiredCache", func(t *testing.T) {
 		key := "expired"
-		err := cache.Put(key, []byte(""), -1*time.Minute)
+		err := cache.Set(key, []byte(""), -1*time.Minute)
 		if err != nil {
 			t.Fatalf("Error saving cache: %v", err)
 		}
@@ -130,7 +130,7 @@ func TestDiskCache(t *testing.T) {
 	t.Run("TestUpdate", func(t *testing.T) {
 		key := "testkey"
 		oldvalue := []byte("oldvalue")
-		err := cache.Put(key, oldvalue, 1*time.Minute)
+		err := cache.Set(key, oldvalue, 1*time.Minute)
 		if err != nil {
 			t.Fatalf("Error saving cache: %v", err)
 		}
@@ -142,7 +142,7 @@ func TestDiskCache(t *testing.T) {
 			t.Fatalf("Expected cache value to be %s, got %s", string(oldvalue), string(got))
 		}
 		newvalue := []byte("newvalue")
-		err = cache.Put(key, newvalue, 1*time.Minute)
+		err = cache.Set(key, newvalue, 1*time.Minute)
 		if err != nil {
 			t.Fatalf("Error saving cache: %v", err)
 		}
@@ -157,7 +157,7 @@ func TestDiskCache(t *testing.T) {
 
 	t.Run("TestRemove", func(t *testing.T) {
 		key := "delete"
-		err := cache.Put(key, []byte("value"), 1*time.Minute)
+		err := cache.Set(key, []byte("value"), 1*time.Minute)
 		if err != nil {
 			t.Fatalf("Error saving cache: %v", err)
 		}
@@ -202,7 +202,7 @@ func TestDiskCache(t *testing.T) {
 		}
 
 		for _, td := range testData {
-			err := cache.Put(td.key, []byte(td.value), td.expiry)
+			err := cache.Set(td.key, []byte(td.value), td.expiry)
 			if err != nil {
 				t.Fatalf("Error saving cache: %v", err)
 			}
@@ -284,7 +284,7 @@ func TestDiskCache(t *testing.T) {
 		}
 
 		for _, td := range testData {
-			err := cache.Put(td.key, []byte(td.value), td.expiry)
+			err := cache.Set(td.key, []byte(td.value), td.expiry)
 			if err != nil {
 				t.Fatalf("Error saving cache: %v", err)
 			}
@@ -333,7 +333,7 @@ func TestDiskCache(t *testing.T) {
 		}(cache)
 
 		// Test behavior when an empty key is provided
-		err = cache.Put("", []byte("value"), 1*time.Minute)
+		err = cache.Set("", []byte("value"), 1*time.Minute)
 		if err == nil {
 			t.Errorf("Expected error for empty key, but got nil")
 		}
@@ -369,7 +369,7 @@ func TestDiskCache(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := cache.Put(key, value, expiry)
+				err := cache.Set(key, value, expiry)
 				if err != nil {
 					t.Errorf("Error saving cache: %v", err)
 				}

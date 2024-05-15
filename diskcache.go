@@ -69,8 +69,8 @@ func (c Cache) Filepath(key string) string {
 	return c.filepath(c.Filename(key))
 }
 
-// Put saves a cache entry with a key, value, and duration.
-func (c Cache) Put(key string, value []byte, duration time.Duration) error {
+// Set saves a cache entry with a key, value, and duration.
+func (c Cache) Set(key string, value []byte, duration time.Duration) error {
 	// Validate the key.
 	if len(key) == 0 {
 		return fmt.Errorf("key cannot be empty")
