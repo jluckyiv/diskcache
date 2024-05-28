@@ -325,7 +325,7 @@ func TestDiskCache(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating cache: %v", err)
 		}
-		defer func(cache diskcache.Cache) {
+		defer func(cache *diskcache.Cache) {
 			err := cache.Flush()
 			if err != nil {
 				t.Fatalf("Error flushing cache: %v", err)

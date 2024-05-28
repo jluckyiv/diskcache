@@ -31,46 +31,62 @@ type Data struct {
 }
 
 // New creates a new disk cache in the given directory.
-func New(dir string) (Cache, error) {
+func New(dir string) (*Cache, error) {
 	var err error
 	// Validate the directory.
 	if len(dir) == 0 {
-		return Cache{}, fmt.Errorf("directory path is empty")
+		return nil, fmt.Errorf("directory path is empty")
 	}
 	// Create the directory if it doesn't exist.
 	// MkdirAll creates a directory and any necessary parents and
 	// is a no-op if the directory already exists.
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
-		return Cache{}, fmt.Errorf("error creating cache directory: %w", err)
+		return nil, fmt.Errorf("error creating cache directory: %w", err)
 	}
-	return Cache{dir: dir}, nil
+	return &Cache{dir: dir}, nil
+}
+
+// SetDir allows the user to set the directory after the cache has been created.
+func (c *Cache) SetDir(dir string) error {
+	if len(dir) == 0 {
+		return fmt.Errorf("directory path is empty")
+	}
+	// Create the directory if it doesn't exist.
+	// MkdirAll creates a directory and any necessary parents and
+	// is a no-op if the directory already exists.
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return fmt.Errorf("error creating cache directory: %w", err)
+	}
+	c.dir = dir
+	return nil
 }
 
 // Delete removes the cache directory and all its contents.
-func (c Cache) Delete() error {
+func (c *Cache) Delete() error {
 	return os.RemoveAll(c.dir)
 }
 
 // Dir returns the directory path of the cache.
-func (c Cache) Dir() string {
+func (c *Cache) Dir() string {
 	return c.dir
 }
 
 // Filename returns the filename of a cache entry.
 // TODO: Remove Filename from the public API?
-func (c Cache) Filename(key string) string {
+func (c *Cache) Filename(key string) string {
 	return fmt.Sprintf("%x.json", sha256.Sum256([]byte(key)))
 }
 
 // Filepath returns the full path of a cache entry.
 // TODO: Remove Filepath from the public API?
-func (c Cache) Filepath(key string) string {
+func (c *Cache) Filepath(key string) string {
 	return c.filepath(c.Filename(key))
 }
 
 // Set saves a cache entry with a key, value, and duration.
-func (c Cache) Set(key string, value []byte, duration time.Duration) error {
+func (c *Cache) Set(key string, value []byte, duration time.Duration) error {
 	// Validate the key.
 	if len(key) == 0 {
 		return fmt.Errorf("key cannot be empty")
@@ -88,13 +104,13 @@ func (c Cache) Set(key string, value []byte, duration time.Duration) error {
 
 // Read reads a cache entry from disk and returns all its data.
 // It does not check if the entry is expired.
-func (c Cache) Read(key string) (Data, error) {
+func (c *Cache) Read(key string) (Data, error) {
 	return c.readFile(c.Filename(key))
 }
 
 // Get gets a cache entry from disk and returns the value only.
 // It returns an error if the entry is expired.
-func (c Cache) Get(key string) ([]byte, error) {
+func (c *Cache) Get(key string) ([]byte, error) {
 	entry, err := c.Read(key)
 	if err != nil {
 		return nil, err
@@ -106,7 +122,7 @@ func (c Cache) Get(key string) ([]byte, error) {
 }
 
 // Expiry returns the expiry time of a cache entry.
-func (c Cache) Expiry(key string) time.Time {
+func (c *Cache) Expiry(key string) time.Time {
 	entry, err := c.Read(key)
 	if err != nil {
 		return time.Time{}
@@ -115,11 +131,11 @@ func (c Cache) Expiry(key string) time.Time {
 }
 
 // IsExpired returns true if a cache entry is expired.
-func (c Cache) IsExpired(key string) bool {
+func (c *Cache) IsExpired(key string) bool {
 	return time.Now().After(c.Expiry(key))
 }
 
-func (c Cache) list() ([]Data, error) {
+func (c *Cache) list() ([]Data, error) {
 	dirEntries, err := os.ReadDir(c.dir)
 	if err != nil {
 		return nil, fmt.Errorf("error reading directory: %w", err)
@@ -137,7 +153,7 @@ func (c Cache) list() ([]Data, error) {
 
 // List returns a list of cache entry data.
 // It accepts sorting options.
-func (c Cache) List(options ...func([]Data)) ([]Data, error) {
+func (c *Cache) List(options ...func([]Data)) ([]Data, error) {
 	list, err := c.list()
 	if err != nil {
 		return nil, err
@@ -178,7 +194,7 @@ func SortByValue(entries []Data) {
 }
 
 // Flush deletes all cache entries from disk.
-func (c Cache) Flush() error {
+func (c *Cache) Flush() error {
 	dirEntries, err := os.ReadDir(c.dir)
 	if err != nil {
 		return err
@@ -197,7 +213,7 @@ func (c Cache) Flush() error {
 }
 
 // Clean deletes expired cache entries from disk.
-func (c Cache) Clean() error {
+func (c *Cache) Clean() error {
 	var errs error
 	list, err := c.list()
 	if err != nil {
@@ -229,20 +245,20 @@ func (c Cache) Clean() error {
 }
 
 // Remove deletes a cache entry from disk.
-func (c Cache) Remove(key string) error {
+func (c *Cache) Remove(key string) error {
 	return os.Remove(c.Filepath(key))
 }
 
 // readDirEntry reads an entry from disk.
 // It differs from the Read method in that it takes a fs.DirEntry instead of a key.
 // It's not part of the public API because the filename is not known outside the package.
-func (c Cache) readDirEntry(dirEntry fs.DirEntry) (Data, error) {
+func (c *Cache) readDirEntry(dirEntry fs.DirEntry) (Data, error) {
 	return c.readFile(dirEntry.Name())
 }
 
 // readFile reads a cache entry from disk.
 // It takes a filename instead of a key.
-func (c Cache) readFile(filename string) (Data, error) {
+func (c *Cache) readFile(filename string) (Data, error) {
 	bytes, err := os.ReadFile(c.filepath(filename))
 	if err != nil {
 		return Data{}, fmt.Errorf("error reading data: %w", err)
@@ -256,17 +272,17 @@ func (c Cache) readFile(filename string) (Data, error) {
 }
 
 // filepath returns the full path of a cache entry.
-func (c Cache) filepath(filename string) string {
+func (c *Cache) filepath(filename string) string {
 	return filepath.Join(c.dir, filename)
 }
 
 // removeFile deletes a cache entry from disk.
-func (c Cache) removeFile(filename string) error {
+func (c *Cache) removeFile(filename string) error {
 	return os.Remove(c.filepath(filename))
 }
 
 // removeDirEntry deletes a cache entry from disk.
 // It differs from the Remove method in that it takes a fs.DirEntry instead of a key.
-func (c Cache) removeDirEntry(dirEntry fs.DirEntry) error {
+func (c *Cache) removeDirEntry(dirEntry fs.DirEntry) error {
 	return c.removeFile(dirEntry.Name())
 }
