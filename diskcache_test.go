@@ -175,6 +175,24 @@ func TestDiskCache(t *testing.T) {
 		}
 	})
 
+	t.Run("TestHas", func(t *testing.T) {
+		key := "shouldExist"
+		err := cache.Set(key, []byte("value"), 1*time.Minute)
+		if err != nil {
+			t.Fatalf("Error saving cache: %v", err)
+		}
+		has := cache.Has(key)
+		if !has {
+			t.Fatalf("Expected key to exist")
+		}
+		key = "shouldNotExist"
+		has = cache.Has(key)
+		if has {
+			t.Fatalf("Expected key to not exist")
+		}
+		_ = cache.Remove("shouldExist")
+	})
+
 	t.Run("TestList", func(t *testing.T) {
 		// Flush the cache.
 		err := cache.Flush()

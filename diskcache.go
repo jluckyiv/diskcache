@@ -92,6 +92,12 @@ func (c Cache) Read(key string) (Data, error) {
 	return c.readFile(c.Filename(key))
 }
 
+// Has checks if a cache entry exists on disk.
+func (c Cache) Has(key string) bool {
+	_, err := os.Stat(c.Filepath(key))
+	return err == nil
+}
+
 // Get gets a cache entry from disk and returns the value only.
 // It returns an error if the entry is expired.
 func (c Cache) Get(key string) ([]byte, error) {
